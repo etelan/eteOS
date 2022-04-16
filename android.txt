@@ -1,0 +1,55 @@
+package com.etelan.eteos;
+
+import android.os.AsyncTask;
+import android.util.Log;
+
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+public class DoNetworkAsync extends AsyncTask<String, Void, String> {
+
+    private URL url;
+    private HttpURLConnection aHttpURLConnection;
+
+    @Override
+    protected String doInBackground(String... strings) {
+        /* Make URL */
+        try {
+            url = new URL(
+                    strings[0]);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        /* Connect URL. */
+        try {
+            aHttpURLConnection = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        /* Get Response Code */
+        String response = "No Response Code";
+        try {
+            response = String.valueOf(aHttpURLConnection.getResponseCode());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        aHttpURLConnection.disconnect();
+
+        return response;
+    }
+
+    protected void onPostExecute(String result) {
+        if (result != null) {
+            Log.d("alexis", result);
+        } else {
+            Log.d("alexis", "NO RESULT");
+        }
+    }
+}

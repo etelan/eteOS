@@ -1,0 +1,134 @@
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import time
+import subprocess
+import win32gui, win32con, win32com.client
+import time
+from pynput.keyboard import KeyCode, Controller, Key
+from urllib.parse import urlparse
+
+# Audio
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
+# Setup Volume Mixer
+devices = AudioUtilities.GetSpeakers()
+interface = devices.Activate(
+    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+volume = cast(interface, POINTER(IAudioEndpointVolume))
+
+hostName = "192.168.0.135"
+serverPort = 620
+
+
+chromeURL = "cmd /c start chrome"
+netflixURL = "cmd /c start chrome https://www.netflix.com/ --new-window"
+steamCMD = r"C:\Program Files (x86)\Steam\steam.exe"
+unityCMD = r"D:\Unity\Unity Hub\Unity Hub.exe"
+spotifyCMD = r"C:\Users\[REPLACE WITH YOUR USERNAME]\AppData\Roaming\Spotify\Spotify.exe"
+discordCMD = r"C:\Users\[REPLACE WITH YOUR USERNAME]\AppData\Local\Discord\Update.exe --processStart Discord.exe"
+spotifyCMD = r"C:\Users\[REPLACE WITH YOUR USERNAME]\AppData\Roaming\Spotify\Spotify.exe"
+
+keyboard = Controller()
+
+
+class MyServer(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+
+        params = urlparse(self.path)
+
+        # Minimizer
+        if (self.path == "/minimize"):
+            print("Minimizing...")
+            window = win32gui.GetForegroundWindow()
+            win32gui.ShowWindow(window, win32con.SW_MINIMIZE)
+
+        # Minimizer
+        if (self.path == "/maximize"):
+            print("Maximizing...")
+            window = win32gui.GetForegroundWindow()
+            win32gui.ShowWindow(window, win32con.SW_MAXIMIZE)
+
+        # Restore
+        if (self.path == "/restore"):
+            print("Restoring...")
+            window = win32gui.GetForegroundWindow()
+            win32gui.ShowWindow(window, win32con.SW_RESTORE)
+            
+        # CHROME
+        if (self.path == "/netflix"):
+            print("Loading Netflix...")
+            subprocess.Popen(netflixURL, shell=True)
+            time.sleep(2)
+            fullScreenIt("Netflix - Google Chrome")
+
+        if (self.path == "/chrome"):
+            print("Loading Chrome...")
+            subprocess.Popen(chromeURL, shell=True)
+
+        # APPS
+        if (self.path == "/unity"):
+            print("Loading Unity...")
+            subprocess.Popen(unityCMD, shell=True)
+            time.sleep(1)
+            fullScreenIt("Unity Hub 3.0.1")
+
+        if (self.path == "/steam"):
+            print("Loading Steam...")
+            subprocess.call(steamCMD, shell=True)
+            fullScreenIt("Steam")
+
+        if (self.path == "/spotify"):
+            print("Loading Spotify...")
+            subprocess.call(spotifyCMD, shell=True)
+            print("loaded spotify")
+
+        if (self.path == "/discord"):
+            print("Loading Discord...")
+            subprocess.call(discordCMD, shell=True)
+            fullScreenItForeground()
+
+        # Media Controls
+        if (self.path == "/toggle"):
+            print("Play/Pausing...")
+            keyboard.press(KeyCode.from_vk(0xB3))
+            
+        # Media Controls
+        if ("/volume" in self.path):
+            level = int(params.query.split("=")[1]) / 100
+            volume.SetMasterVolumeLevelScalar(level, None)
+        
+        # Data for debug is sent back
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(bytes("<html><head><title>eteOS</title></head>", "utf-8"))
+        self.wfile.write(bytes("<p>Request: %s</p>" % self.path, "utf-8"))
+        self.wfile.write(bytes("<body>", "utf-8"))
+        self.wfile.write(bytes("<p>This is an example web server.</p>", "utf-8"))
+        self.wfile.write(bytes("</body></html>", "utf-8"))
+
+# Quality Of Life Function
+def fullScreenIt(windowHandle):
+    # Maximizes it 
+    window = win32gui.FindWindow(0, windowHandle)
+    win32gui.ShowWindow(window, win32con.SW_MAXIMIZE)
+
+    # Bring to front
+    shell = win32com.client.Dispatch("WScript.Shell")
+    shell.SendKeys('%')
+    win32gui.SetForegroundWindow(window)
+
+
+if __name__ == "__main__":        
+    webServer = HTTPServer((hostName, serverPort), MyServer)
+    print("Server started http://%s:%s" % (hostName, serverPort))
+
+    try:
+        webServer.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+    webServer.server_close()
+    print("Server stopped.")
